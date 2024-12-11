@@ -1,0 +1,54 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+        arch: [x64]
+        include:
+          - os: macos-latest
+            arch: arm64
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.x'  # 根据你项目实际需要的Go版本进行修改
+
+    - name: Build binary
+      run: |
+        GOOS=${{ matrix.os == 'windows-latest' && 'windows' || 'darwin' }}
+        GOARCH=${{ matrix.arch }}
+        output_name="Yasso_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
+        go build -o ${{ github.workspace }}/${{ output_name }}.
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+
+    - name: Upload binaries to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ output_name }}
+        asset_name: ${{ output_name }}
+        asset_content_type: application/octet-stream
