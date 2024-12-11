@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -29,8 +29,8 @@ jobs:
       run: |
         GOOS=${{ matrix.os == 'windows-latest' && 'windows' || 'darwin' }}
         GOARCH=${{ matrix.arch }}
-        output_name="Yasso_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
-        go build -o ${{ github.workspace }}/${{ output_name }}.
+        output_name="your_project_name_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
+        echo "OUTPUT_NAME=${output_name}" >> $GITHUB_ENV # 将output_name设置为环境变量
 
     - name: Create Release
       id: create_release
@@ -49,6 +49,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ github.workspace }}/${{ output_name }}
-        asset_name: ${{ output_name }}
+        asset_path: ${{ github.workspace }}/${{ env.OUTPUT_NAME }} # 通过环境变量引用
+        asset_name: ${{ env.OUTPUT_NAME }}
         asset_content_type: application/octet-stream
