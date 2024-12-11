@@ -3,7 +3,7 @@ name: Go Build and Release
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
@@ -59,6 +59,7 @@ jobs:
           path: ./artifacts
 
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref_name }}
@@ -71,7 +72,7 @@ jobs:
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         with:
-          release_id: ${{ steps.create-release.outputs.id }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts
-          asset_name: myapp_${{ matrix.os }}_${{ matrix.arch }}.zip
+          asset_name: Yasso_${{ matrix.os }}_${{ matrix.arch }}.zip
           asset_content_type: application/zip
