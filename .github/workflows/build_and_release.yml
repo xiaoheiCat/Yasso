@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_and_release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,21 +25,33 @@ jobs:
       with:
         go-version: '1.x'
 
-    - name: Build binary
+    - name: Build binaries
       run: |
-        GOOS=${{ matrix.os == 'windows-latest' && 'windows' || 'darwin' }}
-        GOARCH=${{ matrix.arch }}
-        output_name="Yasso_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
-        echo "OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
+        for build_config in "${{ matrix.os }}" "${{ matrix.arch }}"; do
+          GOOS=$(echo $build_config | grep -i 'windows' && echo 'windows' || echo 'darwin')
+          GOARCH=$(echo $build_config | grep -i 'arm64' && echo 'arm64' || echo 'x64')
+          output_name="your_project_name_${GOOS}_${GOARCH}"
+          go build -o ${{ github.workspace }}/${output_name}.
+          echo "ASSET_NAME_${build_config}=${output_name}" >> $GITHUB_ENV
+          echo "ASSET_PATH_${build_config}=${{ github.workspace }}/${output_name}" >> $GITHUB_ENV
+        done
 
-    - name: Create Release
+    - name: Generate unique tag name
+      id: generate_tag
+      run: |
+        TAG_PREFIX=${{ github.ref_name }}
+        DATE=$(date +%Y%m%d%H%M%S)
+        UNIQUE_TAG="${TAG_PREFIX}_${DATE}"
+        echo "TAG_NAME=${UNIQUE_TAG}" >> $GITHUB_ENV
+
+    - name: Create or Update Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
+        tag_name: ${{ env.TAG_NAME }}
+        release_name: Release ${{ env.TAG_NAME }}
         draft: false
         prerelease: false
 
@@ -49,6 +61,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ github.workspace }}/${{ env.OUTPUT_NAME }}
-        asset_name: ${{ env.OUTPUT_NAME }}
+        asset_name: ${{ env.ASSET_NAME_${{ matrix.os }}_${{ matrix.arch }} }}
+        asset_path: ${{ env.ASSET_PATH_${{ matrix.os }}_${{ matrix.arch }} }}
         asset_content_type: application/octet-stream
