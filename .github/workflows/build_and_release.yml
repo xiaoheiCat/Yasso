@@ -23,14 +23,14 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.x'  # 根据你项目实际需要的Go版本进行修改
+        go-version: '1.x'
 
     - name: Build binary
       run: |
         GOOS=${{ matrix.os == 'windows-latest' && 'windows' || 'darwin' }}
         GOARCH=${{ matrix.arch }}
-        output_name="your_project_name_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
-        echo "OUTPUT_NAME=${output_name}" >> $GITHUB_ENV # 将output_name设置为环境变量
+        output_name="Yasso_${{ matrix.os == 'windows-latest' && 'win' || 'mac' }}_${{ matrix.arch }}"
+        echo "OUTPUT_NAME=${output_name}" >> $GITHUB_ENV
 
     - name: Create Release
       id: create_release
@@ -49,6 +49,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ github.workspace }}/${{ env.OUTPUT_NAME }} # 通过环境变量引用
+        asset_path: ${{ github.workspace }}/${{ env.OUTPUT_NAME }}
         asset_name: ${{ env.OUTPUT_NAME }}
         asset_content_type: application/octet-stream
