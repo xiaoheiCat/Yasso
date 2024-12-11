@@ -40,13 +40,19 @@ jobs:
 
       - name: Build binary
         run: |
-          go build -o build/${{ matrix.os }}_${{ matrix.arch }}/Yasso
+          mkdir -p build
+          go build -o build/Yasso
+
+      - name: Compress artifact
+        run: |
+          zip -j Yasso_${{ matrix.os }}_${{ matrix.arch }}.zip build/Yasso
+        shell: bash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.os }}_${{ matrix.arch }}_binary
-          path: build/${{ matrix.os }}_${{ matrix.arch }}
+          name: Yasso_${{ matrix.os }}_${{ matrix.arch }}
+          path: Yasso_${{ matrix.os }}_${{ matrix.arch }}.zip
 
   release:
     needs: build
@@ -73,6 +79,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts
-          asset_name: compressed_artifacts/Yasso_${{ matrix.os }}_${{ matrix.arch }}.zip
+          asset_path: ./artifacts/Yasso_*.zip
+          asset_name: $(basename ./artifacts/Yasso_*.zip)
           asset_content_type: application/zip
