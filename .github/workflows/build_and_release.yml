@@ -77,7 +77,7 @@ jobs:
 
       - name: Find Asset Path
         run: |
-          ASSET_PATH=$(find./artifacts -name "Yasso_*.zip" -print -quit)
+          ASSET_PATH=$(find ./artifacts -name "Yasso_*.zip" -print -quit)
           echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
         shell: bash
 
