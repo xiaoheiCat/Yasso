@@ -1,4 +1,4 @@
-name: Build and Release
+name: Go Build and Release
 
 on:
   push:
@@ -7,60 +7,71 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_and_release:
-    runs-on: ${{ matrix.os }}
+  build:
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
-        arch: [x64]
-        include:
-          - os: macos-latest
+        os: [windows, macos]
+        arch: [amd64, arm64]
+        exclude:
+          - os: windows
             arch: arm64
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.x'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
 
-    - name: Build binaries
-      run: |
-        for build_config in "${{ matrix.os }}" "${{ matrix.arch }}"; do
-          GOOS=$(echo $build_config | grep -i 'windows' && echo 'windows' || echo 'darwin')
-          GOARCH=$(echo $build_config | grep -i 'arm64' && echo 'arm64' || echo 'x64')
-          output_name="your_project_name_${GOOS}_${GOARCH}"
-          go build -o ${{ github.workspace }}/${output_name}.
-          echo "ASSET_NAME_${build_config}=${output_name}" >> $GITHUB_ENV
-          echo "ASSET_PATH_${build_config}=${{ github.workspace }}/${output_name}" >> $GITHUB_ENV
-        done
+      - name: Configure environment
+        run: |
+          if [ "${{ matrix.os }}" == "windows" ]; then
+            export GOOS=windows
+          elif [ "${{ matrix.os }}" == "macos" ]; then
+            export GOOS=darwin
+          fi
+          export GOARCH=${{ matrix.arch }}
+          echo "GOOS=$GOOS" >> $GITHUB_ENV
+          echo "GOARCH=$GOARCH" >> $GITHUB_ENV
 
-    - name: Generate unique tag name
-      id: generate_tag
-      run: |
-        TAG_PREFIX=${{ github.ref_name }}
-        DATE=$(date +%Y%m%d%H%M%S)
-        UNIQUE_TAG="${TAG_PREFIX}_${DATE}"
-        echo "TAG_NAME=${UNIQUE_TAG}" >> $GITHUB_ENV
+      - name: Build binary
+        run: |
+          go build -o build/${{ matrix.os }}_${{ matrix.arch }}/myapp
 
-    - name: Create or Update Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.TAG_NAME }}
-        release_name: Release ${{ env.TAG_NAME }}
-        draft: false
-        prerelease: false
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}_${{ matrix.arch }}_binary
+          path: build/${{ matrix.os }}_${{ matrix.arch }}
 
-    - name: Upload binaries to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_name: ${{ format('{0}_{1}_{2}', env.ASSET_NAME_, matrix.os, matrix.arch) }}
-        asset_path: ${{ format('{0}_{1}_{2}', env.ASSET_PATH_, matrix.os, matrix.arch) }}
-        asset_content_type: application/octet-stream
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./artifacts
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        with:
+          release_id: ${{ steps.create-release.outputs.id }}
+          asset_path: ./artifacts
+          asset_name: myapp_${{ matrix.os }}_${{ matrix.arch }}.zip
+          asset_content_type: application/zip
