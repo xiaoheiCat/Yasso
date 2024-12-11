@@ -58,6 +58,13 @@ jobs:
         with:
           path: ./artifacts
 
+      - name: Compress artifacts
+        run: |
+          mkdir -p compressed_artifacts
+          for dir in ./artifacts/*; do
+            zip -r compressed_artifacts/$(basename "$dir").zip "$dir"
+          done
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -73,6 +80,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts
+          asset_path: ./compressed_artifacts
           asset_name: Yasso_${{ matrix.os }}_${{ matrix.arch }}.zip
           asset_content_type: application/zip
