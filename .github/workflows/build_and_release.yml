@@ -88,3 +88,5 @@ jobs:
           asset_path: ${{ env.ASSET_PATH }}
           asset_name: $(basename ${{ env.ASSET_PATH }})
           asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
